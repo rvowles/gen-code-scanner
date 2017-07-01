@@ -4,14 +4,24 @@ import com.github.javaparser.symbolsolver.model.declarations.ReferenceTypeDeclar
 import com.github.javaparser.symbolsolver.model.declarations.TypeDeclaration
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import org.apache.maven.plugins.annotations.Parameter
 
 @CompileStatic
 class Group {
-	Set<TypeDeclaration> types = new HashSet<>()
+	@Parameter
 	String groupName
-
-	@Override
-	String toString() {
-		return "group: ${groupName} : ${types*.name}"
-	}
+	@Parameter
+	String template
+	@Parameter
+	String className
+	@Parameter
+	boolean createGraph
+	@Parameter
+	boolean limitFollowToSource
+	@Parameter
+	Set<String> limitFollowPackages
+	@Parameter
+	List<String> postProcessors
+	@Parameter
+	Map<String, String> context = [:]
 }

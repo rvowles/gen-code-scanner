@@ -1,6 +1,7 @@
 package com.bluetrainsoftware.scanner.model
 
 import groovy.transform.CompileStatic
+import org.apache.maven.plugins.annotations.Parameter
 
 /**
  *
@@ -8,15 +9,23 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class Scan {
+	@Parameter
 	List<String> joinGroups
+	@Parameter
 	List<String> packages = []
+	@Parameter
 	boolean recursePackages = true
+	@Parameter
 	boolean limitToSource = true
+	@Parameter
 	List<String> classes = []
+	@Parameter
 	List<String> requiredAnnotations = []
+	@Parameter
 	List<String> followAnnotations = []
-	boolean limitFollowToSource
+	@Parameter
 	List<String> excludes
+	@Parameter
 	List<String> includes
 
 
@@ -24,6 +33,43 @@ class Scan {
 		return (!includes && !excludes) ||
 		(includes && includes.contains(name)) ||
 			(excludes && !excludes.contains(name))
+	}
+
+	public void setJoinGroup(String group) {
+		if (!this.joinGroups) {
+			this.joinGroups = [group]
+		}
+	}
+
+	public void setPackage(String pkg) {
+		if (!this.packages) {
+			this.packages = []
+		}
+
+		parsePackage(pkg)
+	}
+
+	private void parsePackage(String pkg) {
+		if (pkg.contains(':')) {
+			String basePackage = pkg.substring(0, pkg.indexOf(':'))
+			Arrays.stream( pkg.substring(pkg.indexOf(':')+1).split(',')).map({ String s -> s.trim()})
+			  .filter({ String s -> s.length() > 0})
+			  .forEach({ String extra ->
+				this.packages.add(basePackage + '.' + extra)
+			})
+		} else {
+			this.packages.add(pkg)
+		}
+	}
+
+	public void setPackages(List<String> pkgs) {
+		if (!this.packages) {
+			this.packages = []
+		}
+
+		pkgs?.each {
+			parsePackage(it)
+		}
 	}
 
 	/**
