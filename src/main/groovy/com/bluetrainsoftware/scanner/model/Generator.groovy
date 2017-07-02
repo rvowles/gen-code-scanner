@@ -13,7 +13,7 @@ class Generator {
 	@Parameter
 	String sourceBase = "./src/main/java"
 	@Parameter
-	boolean includeJarDependencies = false
+	boolean scanJarDependencies = false
 	@Parameter
 	List<Scan> scans
 	@Parameter
@@ -25,12 +25,27 @@ class Generator {
 	@Parameter
 	Map<String, String> context = [:]
 
-	String simpleClassName
-	String packageName
+	private String simpleName
+	private String packageName
+
+	String getSimpleName() {
+		return simpleName
+	}
+
+	String getPackageName() {
+		return packageName
+	}
 
 	public void setClassName(String cName) {
 		this.className = cName
-		this.simpleClassName = cName.substring(cName.lastIndexOf('.') + 1)
-		this.packageName = cName.substring(0, cName.lastIndexOf('.'))
+
+		int packageSep = cName.lastIndexOf('.')
+		if (packageSep != -1) {
+			this.simpleName = cName.substring(packageSep + 1)
+			this.packageName = cName.substring(0, packageSep)
+		} else {
+			this.simpleName = className
+			this.packageName = ""
+		}
 	}
 }

@@ -13,10 +13,12 @@ import com.github.javaparser.ast.body.TypeDeclaration
 import com.github.javaparser.ast.expr.AnnotationExpr
 import com.github.javaparser.ast.expr.NormalAnnotationExpr
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserClassDeclaration
 import com.github.javaparser.symbolsolver.model.declarations.ReferenceTypeDeclaration
 import com.github.javaparser.symbolsolver.model.methods.MethodUsage
 import com.github.javaparser.symbolsolver.model.typesystem.ReferenceType
 import com.github.javaparser.symbolsolver.model.typesystem.Type
+import com.github.javaparser.symbolsolver.reflectionmodel.ReflectionClassDeclaration
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
@@ -175,7 +177,7 @@ class ScannerMojo extends AbstractMojo {
 
 		if (scanner.className && scanner.template && missedGroups) {
 			context.put("packageName", scanner.packageName)
-			context.put("simpleClassName", scanner.simpleClassName)
+			context.put("simpleName", scanner.simpleName)
 			context.put("className", scanner.className)
 
 			if (scanner.context) {
@@ -247,7 +249,6 @@ class ScannerMojo extends AbstractMojo {
 
 	void processFiles(Scan scan, File file) {
 		file.listFiles().each { File f ->
-			println "checking ${f.name}"
 			if (f.isDirectory() && scan.recursePackages) {
 				processFiles(scan, f)
 			} else if (f.name.endsWith(".java")) {
@@ -313,15 +314,22 @@ class ScannerMojo extends AbstractMojo {
 
 	private addTypeToGroups(Scan scan, CollectedClass cc) {
 		scan.joinGroups.each { String group ->
-			groups[group].types.add(cc)
+			if (!groups[group].types.contains(cc)) {
+				groups[group].types.add(cc)
+			}
 		}
 	}
 
 	private addTypeToGroups(Scan scan, ReferenceType td) {
 		scan.joinGroups.each { String name ->
 			CollectedGroup group = groups[name]
-			if (!group.group.limitFollowToSource) {
-				group.classTypes.add(Class.forName(td.describe(), false, this.getClass().getClassLoader()));
+			if (!(scan.limitToSource || group.group?.limitFollowToSource)) {
+				if (td.getTypeDeclaration() instanceof JavaParserClassDeclaration) {
+					CollectedClass cc = new CollectedClass(td.getTypeDeclaration(), JavaParserClassDeclaration.class.cast(td.getTypeDeclaration()).getWrappedNode())
+					addTypeToGroups(scan, cc)
+				} else if (td.getTypeDeclaration() instanceof ReflectionClassDeclaration) {
+					group.classTypes.add(Class.forName(td.describe(), false, this.getClass().getClassLoader()));
+				}
 			}
 		}
 	}
@@ -347,6 +355,11 @@ class ScannerMojo extends AbstractMojo {
 
 		fields.each { String name ->
 			com.github.javaparser.symbolsolver.model.declarations.FieldDeclaration fld = rd.getField(name)
+			if (fld.type instanceof ReferenceType) {
+				addTypeToGroups(scan, ReferenceType.class.cast(fld.type))
+			}
+
+			println "found"
 //			addTypeToGroups(scan, rd.getField(name).declaringType())
 		}
 

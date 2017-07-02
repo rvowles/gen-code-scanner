@@ -14,7 +14,8 @@ class CollectedAnnotation extends HashMap<String, String> {
 		this.annotation = annotation
 
 		annotation.pairs.each { MemberValuePair mvp ->
-			put(mvp.name.asString(), mvp.value.toString())
+			String value = mvp.value.toString()?.trim()
+			put(mvp.name.asString(), value)
 		}
 	}
 

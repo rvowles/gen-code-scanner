@@ -32,4 +32,19 @@ class CollectedClass {
 	public void setOriginalAnnotation(NormalAnnotationExpr normalAnnotationExpr) {
 		this.annotation = new CollectedAnnotation(normalAnnotationExpr)
 	}
+
+	boolean equals(o) {
+		if (this.is(o)) return true
+		if (getClass() != o.class) return false
+
+		CollectedClass that = (CollectedClass) o
+
+		if (src != that.src) return false
+
+		return true
+	}
+
+	int hashCode() {
+		return (src != null ? src.hashCode() : 0)
+	}
 }

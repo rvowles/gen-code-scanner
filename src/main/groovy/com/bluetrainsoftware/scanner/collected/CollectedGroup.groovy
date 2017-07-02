@@ -36,6 +36,35 @@ class CollectedGroup {
 		}
 	}
 
+	public List<CollectedClass> getSortedTypes() {
+		List<CollectedClass> sTypes = []
+		sTypes.addAll(types)
+
+		sTypes.sort(new Comparator<CollectedClass>() {
+			@Override
+			int compare(CollectedClass o1, CollectedClass o2) {
+				return o1.name.compareTo(o2.name)
+			}
+		})
+
+		return sTypes
+	}
+
+	public List<Class<?>> getSortedClasses() {
+		List<Class<?>> sClasses = []
+		sClasses.addAll(classTypes)
+
+		sClasses.sort(new Comparator<Class<?>>() {
+			@Override
+			int compare(Class<?> o1, Class<?> o2) {
+				return o1.name.compareTo(o2.name)
+			}
+		})
+
+		return sClasses
+	}
+
+
 	@Override
 	String toString() {
 		return "group: ${group?.groupName} : ${types*.name}"
