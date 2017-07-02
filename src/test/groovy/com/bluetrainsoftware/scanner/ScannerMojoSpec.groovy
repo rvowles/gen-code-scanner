@@ -3,14 +3,22 @@ package com.bluetrainsoftware.scanner
 import com.bluetrainsoftware.scanner.model.Generator
 import com.bluetrainsoftware.scanner.model.Scan
 import org.apache.maven.plugin.logging.Log
+import org.apache.maven.project.MavenProject
 import spock.lang.Specification
 
 class ScannerMojoSpec extends Specification {
+	String compilePath
+
+	def setup() {
+		compilePath = null
+	}
+
 	private ScannerMojo setupMojo(Generator gen) {
 		ScannerMojo sm = new ScannerMojo(gen)
 		sm.projectDir = new File(".")
 		sm.javaOutFolder = new File("target/test-output")
 		sm.log = [info: { String msg -> println msg}, warn: { String msg -> println msg}, error: { String msg, Throwable t -> println msg; t.printStackTrace()}] as Log
+		sm.project = [addCompileSourceRoot: { String path -> compilePath = path }] as MavenProject
 		sm.execute()
 
 		return sm
@@ -31,9 +39,10 @@ class ScannerMojoSpec extends Specification {
 		  ScannerMojo sm = setupMojo(gen)
 		  String contents = new File(sm.javaOutFolder, "com/WebModule.java").text
 		then: "the file contains the expected filters and servlets"
-		  contents == '''SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "sausage", value = "cumberlands"), @WebInitParam(name = "sausage2", value = "kielbasa", description = "yummy") },dispatcherType={ DispatcherType.ASYNC },urlPatterns="/*"
-Sample2Filtername=Sample2Filter,"peanuts",urlPatterns={ "/nuts/*", "groundnuts/*" }
+		  contents == '''Sample2Filtername=Sample2Filter,"peanuts",urlPatterns={ "/nuts/*", "groundnuts/*" }
+SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "sausage", value = "cumberlands"), @WebInitParam(name = "sausage2", value = "kielbasa", description = "yummy") },dispatcherType={ DispatcherType.ASYNC },urlPatterns="/*"
 '''
+			compilePath == sm.javaOutFolder.absolutePath
 	}
 
 	private Generator injectGenerator() {
@@ -68,6 +77,7 @@ public class InjectModule {
     register(Component3.class);
   }
 }'''
+		compilePath == sm.javaOutFolder.absolutePath
 	}
 
 	def "inject scanning where NOT limited to source generates injection for only this project"() {
@@ -94,6 +104,7 @@ public class InjectModule {
     register(String.class);
   }
 }'''
+		compilePath == sm.javaOutFolder.absolutePath
 	}
 
 }

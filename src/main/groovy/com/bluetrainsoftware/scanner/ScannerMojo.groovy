@@ -42,7 +42,7 @@ import org.apache.maven.project.MavenProjectHelper
  * @author Richard Vowles - https://plus.google.com/+RichardVowles
  */
 @CompileStatic
-@Mojo(name = "generate",
+@Mojo(name = "generate-sources",
 	defaultPhase = LifecyclePhase.GENERATE_SOURCES,
 	configurator = "include-project-dependencies",
 	requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
@@ -56,16 +56,16 @@ class ScannerMojo extends AbstractMojo {
 	@Component
 	protected MavenProjectHelper projectHelper;
 
-	@Parameter(required = true)
+	@Parameter(required = true, property = "scanner")
 	protected Generator scanner
 
-	@Parameter(defaultValue = '${project}', readonly = true)
+	@Parameter(property = 'project', readonly = true)
 	protected MavenProject project
 
 	@Parameter(defaultValue = '${project.build.directory}/generated-sources/modules/')
 	File javaOutFolder
 
-	@Parameter(defaultValue = '${project.directory}')
+	@Parameter(property = 'project.directory')
 	File projectDir
 
 	private final String TARGET_CLASSES = File.separator + "target" + File.separator + "classes"
@@ -76,6 +76,8 @@ class ScannerMojo extends AbstractMojo {
 	public ScannerMojo(Generator scanner) {
 		this.scanner = scanner
 	}
+
+	
 
 	/**
 	 * go figure out what our classpath is, including the dependencies of this project
@@ -154,6 +156,8 @@ class ScannerMojo extends AbstractMojo {
 		}
 
 		processTemplates()
+
+		project.addCompileSourceRoot(javaOutFolder.absolutePath)
 	}
 
 	private void processTemplates() {
