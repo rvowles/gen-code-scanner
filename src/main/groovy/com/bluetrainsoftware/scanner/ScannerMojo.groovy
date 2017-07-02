@@ -42,7 +42,7 @@ import org.apache.maven.project.MavenProjectHelper
  * @author Richard Vowles - https://plus.google.com/+RichardVowles
  */
 @CompileStatic
-@Mojo(name = "generate",
+@Mojo(name = "generate-sources",
 	defaultPhase = LifecyclePhase.GENERATE_SOURCES,
 	configurator = "include-project-dependencies",
 	requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
