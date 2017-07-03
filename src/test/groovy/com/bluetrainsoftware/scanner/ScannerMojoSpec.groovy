@@ -116,7 +116,7 @@ public class InjectModule {
 					new Scan(joinGroup: "sausage", packages: ["com.bluetrainsoftware.test:components"], followAnnotations: ["Inject"], limitToSource: true)
 				],
 				templates: [
-				  new Template(joinGroups: ["sausage=inject"], className: "com.InjectModule", name: "sample", template: "/inject.mustache")
+				  new Template(joinGroups: ["inject=sausage"], className: "com.InjectModule", name: "sample", template: "/inject.mustache")
 				],
 				sourceBase: "./src/test/java"
 			)

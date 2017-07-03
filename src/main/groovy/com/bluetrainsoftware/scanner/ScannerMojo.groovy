@@ -6,6 +6,7 @@ import com.bluetrainsoftware.scanner.model.Generator
 import com.bluetrainsoftware.scanner.model.Scan
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.Modifier
 import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.body.TypeDeclaration
@@ -103,26 +104,26 @@ class ScannerMojo extends AbstractMojo {
 					combinedTypeSolver.add(new JarTypeSolver(sUrl.substring(4)))
 				} else if (sUrl.startsWith("file:")) {
 					if (sUrl.endsWith(".jar")) {
-						println "jarfile -> " + sUrl
+						getLog().debug("jarfile -> " + sUrl)
 						combinedTypeSolver.add(new JarTypeSolver(new File(url.toURI()).absolutePath))
 					} else if (sUrl.endsWith(TARGET_CLASSES) || sUrl.endsWith(TARGET_CLASSES2)) {
 						File realFolder = new File(new File(url.toURI()).getParentFile().getParentFile(), "/src/main/java")
 
 						if (realFolder.exists()) {
-							println "dependent project -> " + realFolder.absolutePath
+							getLog().debug("dependent project -> " + realFolder.absolutePath)
 
 							combinedTypeSolver.add(new JavaParserTypeSolver(realFolder))
 						}
 					} else {
 						combinedTypeSolver.add(new JavaParserTypeSolver(new File(url.toURI())))
-						println "file -> " + sUrl
+						getLog().debug("file -> " + sUrl)
 					}
 				} else {
-					println "no idea -> " + sUrl
+					getLog().debug("no idea -> " + sUrl)
 				}
 			}
 		} else {
-			println "not using a url classloader"
+			getLog().warn("not using a url classloader, cannot discover classes.")
 		}
 	}
 
@@ -145,14 +146,28 @@ class ScannerMojo extends AbstractMojo {
 			}
 		}
 
+		groups.keySet().each { String gp ->
+			def group = groups[gp]
+			if (group.classTypes?.size() == 0 && group.types?.size() == 0) {
+				getLog().warn("Group ${gp} did not discover any classes, is that what you expected?")
+			} else {
+				getLog().info("Group `${gp}` src:${group.types*.name}, classes:${group.classTypes*.name}")
+			}
+		}
+
 		processTemplates()
 
 		project.addCompileSourceRoot(javaOutFolder.absolutePath)
 	}
 
 	private void processTemplates() {
-
 		Map<String, Object> context = [:]
+
+		if (scanner.templates) {
+			getLog().info("processing ${scanner.templates.size()} templates.")
+		} else {
+			getLog().info("there are no templates, will look for default top level template")
+		}
 
 		scanner.templates?.each { com.bluetrainsoftware.scanner.model.Template template ->
 			if (template.template && template.className) {
@@ -170,8 +185,10 @@ class ScannerMojo extends AbstractMojo {
 
 					writeTemplate(context, template.template, template.className)
 				} else {
-					getLog().debug("No matching groups for template with joinGroups ${template.joinGroups}")
+					getLog().warn("No matching groups for template with joinGroups ${template.joinGroups}")
 				}
+			} else {
+				getLog().warn("Found template ${template.name} but could not run it (no template or classname)")
 			}
 		}
 
@@ -279,6 +296,10 @@ class ScannerMojo extends AbstractMojo {
 
 		try {
 			for (TypeDeclaration td : cu.types) {
+				if (!scan.includeAbstract && td.modifiers.contains(Modifier.ABSTRACT)) {
+					continue
+				}
+
 				String name = td.name.toString()
 
 				ReferenceTypeDeclaration rd = facade.getTypeDeclaration(td)
@@ -315,7 +336,8 @@ class ScannerMojo extends AbstractMojo {
 	}
 
 	private addTypeToGroups(Scan scan, CollectedClass cc) {
-		scan.joinGroups.each { String group ->
+
+		scan.getPackageGroups(cc.packageName).each { String group ->
 			if (!groups[group].types.contains(cc)) {
 				groups[group].types.add(cc)
 			}
@@ -323,15 +345,27 @@ class ScannerMojo extends AbstractMojo {
 	}
 
 	private addTypeToGroups(Scan scan, ReferenceType td) {
-		scan.joinGroups.each { String name ->
+		CollectedClass cc = null
+		Class<?> clazz = null
+		String packageName
+
+		if (td.getTypeDeclaration() instanceof JavaParserClassDeclaration) {
+			cc = new CollectedClass(td.getTypeDeclaration(), JavaParserClassDeclaration.class.cast(td.getTypeDeclaration()).getWrappedNode())
+			packageName = td.getTypeDeclaration().packageName
+		} else if (!scan.limitToSource && td.getTypeDeclaration() instanceof ReflectionClassDeclaration) {
+			clazz = Class.forName(td.describe(), false, this.getClass().getClassLoader())
+			packageName = clazz.name
+			packageName = packageName.substring(0, packageName.lastIndexOf('.')) // chop off class name
+		} else {
+			return
+		}
+
+		scan.getPackageGroups(packageName).each { String name ->
 			CollectedGroup group = groups[name]
-			if (!scan.limitToSource) {
-				if (td.getTypeDeclaration() instanceof JavaParserClassDeclaration) {
-					CollectedClass cc = new CollectedClass(td.getTypeDeclaration(), JavaParserClassDeclaration.class.cast(td.getTypeDeclaration()).getWrappedNode())
-					addTypeToGroups(scan, cc)
-				} else if (td.getTypeDeclaration() instanceof ReflectionClassDeclaration) {
-					group.classTypes.add(Class.forName(td.describe(), false, this.getClass().getClassLoader()));
-				}
+			if (cc) {
+				addTypeToGroups(scan, cc)
+			} else {
+				group.classTypes.add(clazz);
 			}
 		}
 	}

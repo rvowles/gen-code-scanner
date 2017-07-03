@@ -34,9 +34,11 @@ class Template extends BaseTemplate {
 
 	private void lineSplit(String group, Map<String, String> groupNames = [:]) {
 		group.split("[;|,]").each { String map ->
+			map = map.trim()
+			
 			if (map.contains('=')) {
 				String[] fields = map.split('=')
-				groupNames[fields[0]] = fields[1]
+				groupNames[fields[1]] = fields[0]
 			} else {
 				groupNames[map] = map
 			}
