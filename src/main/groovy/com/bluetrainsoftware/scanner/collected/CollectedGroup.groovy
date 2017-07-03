@@ -1,15 +1,12 @@
 package com.bluetrainsoftware.scanner.collected
 
-import com.bluetrainsoftware.scanner.model.Group
-import com.github.javaparser.symbolsolver.model.declarations.TypeDeclaration
+import com.bluetrainsoftware.scanner.model.Template
 
 /**
  *
  * @author Richard Vowles - https://plus.google.com/+RichardVowles
  */
 class CollectedGroup {
-	Group group
-
 	String name
 
 	/**
@@ -23,18 +20,6 @@ class CollectedGroup {
 	 * from dependencies
 	 */
 	Set<Class<?>> classTypes = new HashSet<>()
-
-	String packageName
-	String simpleClassName
-
-	public void setGroup(Group group) {
-		this.group = group
-
-		if (group.className) {
-			packageName = group.className.substring(0, group.className.lastIndexOf('.'))
-			simpleClassName = group.className.substring(group.className.lastIndexOf('.') + 1)
-		}
-	}
 
 	public List<CollectedClass> getSortedTypes() {
 		List<CollectedClass> sTypes = []
@@ -67,6 +52,6 @@ class CollectedGroup {
 
 	@Override
 	String toString() {
-		return "group: ${group?.groupName} : ${types*.name}"
+		return "collected-group: ${name} : ${types*.name}"
 	}
 }

@@ -3,7 +3,6 @@ package com.bluetrainsoftware.scanner
 import com.bluetrainsoftware.scanner.collected.CollectedClass
 import com.bluetrainsoftware.scanner.collected.CollectedGroup
 import com.bluetrainsoftware.scanner.model.Generator
-import com.bluetrainsoftware.scanner.model.Group
 import com.bluetrainsoftware.scanner.model.Scan
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit
@@ -77,8 +76,6 @@ class ScannerMojo extends AbstractMojo {
 		this.scanner = scanner
 	}
 
-	
-
 	/**
 	 * go figure out what our classpath is, including the dependencies of this project
 	 */
@@ -129,12 +126,6 @@ class ScannerMojo extends AbstractMojo {
 		}
 	}
 
-	private void fillGroups() {
-		scanner.groups?.each { Group group ->
-			groups[group.groupName].group = group
-		}
-	}
-
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		if (!scanner.scans || !scanner.sourceBase) {
@@ -143,7 +134,6 @@ class ScannerMojo extends AbstractMojo {
 		}
 
 		createResolver()
-		fillGroups()
 
 		facade = JavaParserFacade.get(combinedTypeSolver)
 
@@ -162,24 +152,32 @@ class ScannerMojo extends AbstractMojo {
 
 	private void processTemplates() {
 
-		List<CollectedGroup> missedGroups = []
-		missedGroups.addAll(groups.values())
 		Map<String, Object> context = [:]
 
-		scanner.groups?.each { Group group ->
-			if (group.template && group.className) {
-				if (group.context) {
-					context.putAll(group.context)
+		scanner.templates?.each { com.bluetrainsoftware.scanner.model.Template template ->
+			if (template.template && template.className) {
+				Map<String, CollectedGroup> mappedNames = template.exportGroups(groups)
+
+				if (mappedNames) {
+					if (template.context) {
+						context.putAll(template.context)
+					}
+
+					context.putAll(mappedNames)
+					context.put("packageName", template.packageName)
+					context.put("simpleName", template.simpleName)
+					context.put("className", template.className)
+
+					writeTemplate(context, template.template, template.className)
+				} else {
+					getLog().debug("No matching groups for template with joinGroups ${template.joinGroups}")
 				}
-
-				context.put(group.groupName, groups[group.groupName].types);
-				writeTemplate(context, group.template, group.className)
-
-				missedGroups.remove(missedGroups.find({it.group == group}))
 			}
 		}
 
-		if (scanner.className && scanner.template && missedGroups) {
+		List<CollectedGroup> allGroups = []
+		allGroups.addAll(groups.values())
+		if (scanner.className && scanner.template && allGroups) {
 			context.put("packageName", scanner.packageName)
 			context.put("simpleName", scanner.simpleName)
 			context.put("className", scanner.className)
@@ -188,13 +186,13 @@ class ScannerMojo extends AbstractMojo {
 				context.putAll(scanner.context)
 			}
 
-			missedGroups.each { CollectedGroup group ->
+			allGroups.each { CollectedGroup group ->
 				context.put(group.name, group)
 			}
 
 			writeTemplate(context, scanner.template, scanner.className)
-		} else if (missedGroups) {
-			getLog().warn("Ignoring groups ${missedGroups*.name} because no template/classname exists at group or top level.")
+		} else if (allGroups) {
+			getLog().warn("Ignoring groups ${allGroups*.name} because no template/classname exists at group or top level.")
 		}
 	}
 
@@ -327,7 +325,7 @@ class ScannerMojo extends AbstractMojo {
 	private addTypeToGroups(Scan scan, ReferenceType td) {
 		scan.joinGroups.each { String name ->
 			CollectedGroup group = groups[name]
-			if (!(scan.limitToSource || group.group?.limitFollowToSource)) {
+			if (!scan.limitToSource) {
 				if (td.getTypeDeclaration() instanceof JavaParserClassDeclaration) {
 					CollectedClass cc = new CollectedClass(td.getTypeDeclaration(), JavaParserClassDeclaration.class.cast(td.getTypeDeclaration()).getWrappedNode())
 					addTypeToGroups(scan, cc)
@@ -362,9 +360,6 @@ class ScannerMojo extends AbstractMojo {
 			if (fld.type instanceof ReferenceType) {
 				addTypeToGroups(scan, ReferenceType.class.cast(fld.type))
 			}
-
-			println "found"
-//			addTypeToGroups(scan, rd.getField(name).declaringType())
 		}
 
 		rd.getAllMethods().each { MethodUsage mu ->

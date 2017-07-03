@@ -2,6 +2,7 @@ package com.bluetrainsoftware.scanner
 
 import com.bluetrainsoftware.scanner.model.Generator
 import com.bluetrainsoftware.scanner.model.Scan
+import com.bluetrainsoftware.scanner.model.Template
 import org.apache.maven.plugin.logging.Log
 import org.apache.maven.project.MavenProject
 import spock.lang.Specification
@@ -17,7 +18,8 @@ class ScannerMojoSpec extends Specification {
 		ScannerMojo sm = new ScannerMojo(gen)
 		sm.projectDir = new File(".")
 		sm.javaOutFolder = new File("target/test-output")
-		sm.log = [info: { String msg -> println msg}, warn: { String msg -> println msg}, error: { String msg, Throwable t -> println msg; t.printStackTrace()}] as Log
+		sm.log = [info: { String msg -> println msg}, debug: { String msg -> println msg},
+		          warn: { String msg -> println msg}, error: { String msg, Throwable t -> println msg; t.printStackTrace()}] as Log
 		sm.project = [addCompileSourceRoot: { String path -> compilePath = path }] as MavenProject
 		sm.execute()
 
@@ -60,7 +62,7 @@ SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "
 
 	def "inject scanning where limited to source generates injection for only this project"() {
 		when: "I have setup a scanner"
-		Generator gen = injectGenerator()
+			Generator gen = injectGenerator()
 		and: "i kick it off"
 		  ScannerMojo sm = setupMojo(gen)
 			String contents = new File(sm.javaOutFolder, "com/InjectModule.java").text
@@ -107,4 +109,36 @@ public class InjectModule {
 		compilePath == sm.javaOutFolder.absolutePath
 	}
 
+	def "templates work as expected"() {
+		when: "i set up the scanner for components and put them in a different group and define a template that maps"
+			Generator gen = new Generator(
+				scans: [
+					new Scan(joinGroup: "sausage", packages: ["com.bluetrainsoftware.test:components"], followAnnotations: ["Inject"], limitToSource: true)
+				],
+				templates: [
+				  new Template(joinGroups: ["sausage=inject"], className: "com.InjectModule", name: "sample", template: "/inject.mustache")
+				],
+				sourceBase: "./src/test/java"
+			)
+		and: "i kick it off"
+			ScannerMojo sm = setupMojo(gen)
+			def file = new File(sm.javaOutFolder, "com/InjectModule.java")
+			file.delete()
+			sm.execute()
+			String contents = file.text
+		then: "it is correct"
+			contents == '''package com;
+import com.bluetrainsoftware.test.components.Component1;
+import com.bluetrainsoftware.test.components.Component2;
+import com.bluetrainsoftware.test.components.Component3;
+
+public class InjectModule {
+  public void register() {
+    register(Component1.class);
+    register(Component2.class);
+    register(Component3.class);
+  }
+}'''
+			compilePath == sm.javaOutFolder.absolutePath
+	}
 }
