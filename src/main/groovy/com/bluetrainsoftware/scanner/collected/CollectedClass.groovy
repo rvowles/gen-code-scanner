@@ -1,6 +1,7 @@
 package com.bluetrainsoftware.scanner.collected
 
 import com.github.javaparser.ast.body.TypeDeclaration
+import com.github.javaparser.ast.expr.AnnotationExpr
 import com.github.javaparser.ast.expr.NormalAnnotationExpr
 import com.github.javaparser.symbolsolver.model.declarations.ReferenceTypeDeclaration
 import groovy.transform.CompileStatic
@@ -14,7 +15,8 @@ class CollectedClass {
 	@Delegate
 	private ReferenceTypeDeclaration clazz
 	private TypeDeclaration src
-	CollectedAnnotation annotation
+	Set<CollectedAnnotation> annotations = new HashSet<>()
+
 
 	CollectedClass(ReferenceTypeDeclaration clazz, TypeDeclaration src) {
 		this.clazz = clazz
@@ -29,8 +31,28 @@ class CollectedClass {
 		return src
 	}
 
-	public void setOriginalAnnotation(NormalAnnotationExpr normalAnnotationExpr) {
-		this.annotation = new CollectedAnnotation(normalAnnotationExpr)
+	public void setOriginalAnnotation(AnnotationExpr annotationExpr) {
+		addOriginalAnnotation(annotationExpr)
+	}
+
+	public void addOriginalAnnotation(AnnotationExpr annotationExpr) {
+		if (annotationExpr) {
+			this.annotations.add(new CollectedAnnotation(annotationExpr))
+		}
+	}
+
+	public void addAnnotation(CollectedAnnotation ca) {
+		if (ca) {
+			this.annotations.add(ca)
+		}
+	}
+
+	public CollectedAnnotation getAnnotation() {
+		if (annotations) {
+			return annotations[0]
+		} else {
+			return null
+		}
 	}
 
 	boolean equals(o) {

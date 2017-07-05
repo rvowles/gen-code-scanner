@@ -4,6 +4,7 @@ import com.bluetrainsoftware.scanner.collected.CollectedClass
 import com.bluetrainsoftware.scanner.collected.CollectedGroup
 import com.bluetrainsoftware.scanner.model.Generator
 import com.bluetrainsoftware.scanner.model.Scan
+import com.bluetrainsoftware.scanner.model.SpecificPackageMap
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.Modifier
@@ -11,6 +12,7 @@ import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.body.TypeDeclaration
 import com.github.javaparser.ast.expr.AnnotationExpr
+import com.github.javaparser.ast.expr.MarkerAnnotationExpr
 import com.github.javaparser.ast.expr.NormalAnnotationExpr
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserClassDeclaration
@@ -36,6 +38,8 @@ import org.apache.maven.plugins.annotations.Parameter
 import org.apache.maven.plugins.annotations.ResolutionScope
 import org.apache.maven.project.MavenProject
 import org.apache.maven.project.MavenProjectHelper
+
+import java.lang.annotation.Annotation
 
 /**
  *
@@ -139,7 +143,11 @@ class ScannerMojo extends AbstractMojo {
 		facade = JavaParserFacade.get(combinedTypeSolver)
 
 		scanner.scans.each { Scan scan ->
-			scan.packages.each { String pkg ->
+			scan.resolvePackages()
+		}
+
+		scanner.scans.each { Scan scan ->
+			scan.mostSpecificPackages.each { String pkg ->
 				File dir = new File(new File(scanner.sourceBase), pkg.replace('.', File.separator));
 
 				processFiles(scan, dir)
@@ -185,7 +193,7 @@ class ScannerMojo extends AbstractMojo {
 
 					writeTemplate(context, template.template, template.className)
 				} else {
-					getLog().warn("No matching groups for template with joinGroups ${template.joinGroups}")
+					getLog().warn("No groups collected data that the template ${template.name} relies on (joinGroups ${template.joinGroups})")
 				}
 			} else {
 				getLog().warn("Found template ${template.name} but could not run it (no template or classname)")
@@ -267,6 +275,7 @@ class ScannerMojo extends AbstractMojo {
 	}
 
 	void processFiles(Scan scan, File file) {
+		println "scanning ${file.absolutePath}: ${scan.recursePackages}"
 		file.listFiles().each { File f ->
 			if (f.isDirectory() && scan.recursePackages) {
 				processFiles(scan, f)
@@ -308,14 +317,7 @@ class ScannerMojo extends AbstractMojo {
 					CollectedClass cc = new CollectedClass(rd, td)
 
 					if (scan.requiredAnnotations) {
-						for(AnnotationExpr annotation : td.annotations) {
-							if (scan.requiredAnnotations.contains(annotation.name.asString())) {
-								if (annotation instanceof NormalAnnotationExpr) {
-									cc.originalAnnotation =  NormalAnnotationExpr.class.cast(annotation)
-									break
-								}
-							}
-						}
+						cc.setOriginalAnnotation(findSourceAnnotation(td, scan.requiredAnnotations))
 					}
 
 					if (!scan.requiredAnnotations || cc.annotation) {
@@ -335,11 +337,29 @@ class ScannerMojo extends AbstractMojo {
 		return true
 	}
 
-	private addTypeToGroups(Scan scan, CollectedClass cc) {
+	private AnnotationExpr findSourceAnnotation(TypeDeclaration td, Collection<String> requiredAnnotations) {
+		for(AnnotationExpr annotation : td.annotations) {
+			if (requiredAnnotations.contains(annotation.name.asString())) {
+				return annotation
+			}
+		}
 
-		scan.getPackageGroups(cc.packageName).each { String group ->
-			if (!groups[group].types.contains(cc)) {
-				groups[group].types.add(cc)
+		return null
+	}
+
+	private addTypeToGroups(Scan scan, CollectedClass cc) {
+		scan.getPackageMaps(cc.packageName).each { SpecificPackageMap spm ->
+			if (spm.requiredAnnotations) {
+				AnnotationExpr annotation = findSourceAnnotation(cc.src, spm.requiredAnnotations)
+				if (!annotation) {
+					return // skip each
+				} else {
+					cc.addOriginalAnnotation(annotation)
+				}
+			}
+
+			spm.groups.each { String group ->
+				addTypeToGroup(group, cc, null)
 			}
 		}
 	}
@@ -360,14 +380,51 @@ class ScannerMojo extends AbstractMojo {
 			return
 		}
 
-		scan.getPackageGroups(packageName).each { String name ->
-			CollectedGroup group = groups[name]
-			if (cc) {
-				addTypeToGroups(scan, cc)
-			} else {
-				group.classTypes.add(clazz);
+		Set<SpecificPackageMap> packageMaps = scan.getPackageMaps(packageName)
+
+		packageMaps?.each { SpecificPackageMap spm ->
+			if (spm.requiredAnnotations) {
+				if (cc) {
+					AnnotationExpr ann = findSourceAnnotation(cc.src, spm.requiredAnnotations)
+					if (ann == null) {
+						return // skip because source does not have annotation
+					} else {
+						cc.addOriginalAnnotation(ann)
+					}
+				} else if (clazz && !hasRequiredAnnotations(clazz, spm.requiredAnnotations)) {
+					return // skip because class doesn't have annotation
+				}
+			}
+
+			spm.groups.each { String group ->
+				addTypeToGroup(group, cc, clazz)
 			}
 		}
+
+		if (!packageMaps && scan.joinGroups) {
+			// this is the fall through for classes that are annotation mapped but are not in the hierarchy of specified
+			// packages. i.e. if they are injected and come from a package outside the one you are scanning, they drop into
+			// the groups specified here.
+			scan.joinGroups.each { String group ->
+				addTypeToGroup(group, cc, clazz)
+			}
+		}
+	}
+
+	private void addTypeToGroup(String group, CollectedClass cc, Class<?> clazz) {
+		CollectedGroup group1 = groups[group]
+
+		if (cc) {
+			CollectedClass existingCC = group1.types.find({CollectedClass it -> it.equals(cc)})
+			if (existingCC && cc.annotation) {
+				existingCC.addAnnotation(cc.annotation)
+			} else if (!existingCC) {
+				group1.types.add(cc)
+			}
+		} else if (clazz && !group1.classTypes.contains(clazz)) {
+			group1.classTypes.add(clazz)
+		}
+
 	}
 
 
@@ -409,7 +466,11 @@ class ScannerMojo extends AbstractMojo {
 		}
 	}
 
-	private static boolean hasRequiredAnnotations(TypeDeclaration td, List<String> annotations) {
+	private static boolean hasRequiredAnnotations(TypeDeclaration td, Collection<String> annotations) {
 		return annotations.any { String annotation -> td.isAnnotationPresent(annotation)}
+	}
+
+	private static boolean hasRequiredAnnotations(Class<?> clazz, Collection<String> annotations) {
+		return clazz.annotations.any({ Annotation a -> annotations.contains(a.annotationType().simpleName)})
 	}
 }

@@ -1,4 +1,4 @@
-package com.bluetrainsoftware.test.web;
+package com.bluetrainsoftware.test.filters;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.annotation.WebFilter;

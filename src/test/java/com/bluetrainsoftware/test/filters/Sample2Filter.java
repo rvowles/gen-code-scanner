@@ -1,4 +1,4 @@
-package com.bluetrainsoftware.test.web;
+package com.bluetrainsoftware.test.filters;
 
 import javax.servlet.annotation.WebFilter;
 
@@ -6,5 +6,6 @@ import javax.servlet.annotation.WebFilter;
  * @author Richard Vowles - https://plus.google.com/+RichardVowles
  */
 @WebFilter(filterName = "peanuts", urlPatterns = {"/nuts/*", "groundnuts/*"})
+@Deprecated
 public class Sample2Filter {
 }

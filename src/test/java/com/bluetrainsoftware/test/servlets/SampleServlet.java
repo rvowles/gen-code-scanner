@@ -1,4 +1,4 @@
-package com.bluetrainsoftware.test.web;
+package com.bluetrainsoftware.test.servlets;
 
 import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebServlet;
