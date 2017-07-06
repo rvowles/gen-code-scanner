@@ -14,6 +14,8 @@ class Generator extends BaseTemplate {
 	@Parameter
 	List<Scan> scans
 	@Parameter
+	List<String> packages
+	@Parameter
 	List<Template> templates
 	@Parameter
 	String template
@@ -22,4 +24,17 @@ class Generator extends BaseTemplate {
 	Map<String, String> context = [:]
 
 
+	void resolveExtraPackages() {
+		if (scans == null) {
+			scans = []
+		}
+
+		packages?.each { String pkg ->
+			Scan scan = new Scan()
+			scan.setPackage(pkg)
+			scan.resolvePackages()
+
+			scans.add(scan)
+		}
+	}
 }

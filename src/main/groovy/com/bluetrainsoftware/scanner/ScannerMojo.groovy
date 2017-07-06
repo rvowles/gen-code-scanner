@@ -133,6 +133,8 @@ class ScannerMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+		scanner.resolveExtraPackages()
+
 		if (!scanner.scans || !scanner.sourceBase) {
 			getLog().warn("No scans, source base, bailing. ${scanner}")
 			return

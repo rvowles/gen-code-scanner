@@ -47,6 +47,24 @@ SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "
 			compilePath == sm.javaOutFolder.absolutePath
 	}
 
+	def "webservlet with shortform packages scanning works expected"() {
+		when: "I have setup a scanner"
+		Generator gen = new Generator(
+			packages: ["com=filters/@WebFilter", "com=servlets/@WebServlet"],
+			template: "/web.mustache",
+			className: "com.WebModule",
+			sourceBase: "./src/test/java"
+		)
+		and: "i kick it off"
+		ScannerMojo sm = setupMojo(gen)
+		String contents = new File(sm.javaOutFolder, "com/WebModule.java").text
+		then: "the file contains the expected filters and servlets"
+		contents == '''Sample2Filtername=Sample2Filter,"peanuts",urlPatterns={ "/nuts/*", "groundnuts/*" }
+SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "sausage", value = "cumberlands"), @WebInitParam(name = "sausage2", value = "kielbasa", description = "yummy") },dispatcherType={ DispatcherType.ASYNC },urlPatterns="/*"
+'''
+		compilePath == sm.javaOutFolder.absolutePath
+	}
+
 	def "shortform webservlet scanning works expected"() {
 		when: "I have setup a scanner"
 		Generator gen = new Generator(
