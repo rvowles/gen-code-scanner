@@ -315,7 +315,7 @@ class ScannerMojo extends AbstractMojo {
 
 				ReferenceTypeDeclaration rd = facade.getTypeDeclaration(td)
 
-				if (rd.isClass() && scan.interestingClass(name)) {
+				if ((rd.isClass() || rd.isInterface()) && scan.interestingClass(name)) {
 					CollectedClass cc = new CollectedClass(rd, td)
 
 					if (scan.requiredAnnotations) {
