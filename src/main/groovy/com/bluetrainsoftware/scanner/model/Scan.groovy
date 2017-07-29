@@ -99,7 +99,7 @@ class Scan {
 
 		resolveMostSpecificPackages()
 
-		println "most specific packages ${mostSpecificPackages}"
+//		println "most specific packages ${mostSpecificPackages}"
 	}
 
 	boolean interestingClass(String name) {

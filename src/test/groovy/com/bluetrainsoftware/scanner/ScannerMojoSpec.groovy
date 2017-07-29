@@ -20,7 +20,7 @@ class ScannerMojoSpec extends Specification {
 		sm.javaOutFolder = new File("target/test-output")
 		sm.log = [info: { String msg -> println msg}, debug: { String msg -> println msg},
 		          warn: { String msg -> println msg}, error: { String msg, Throwable t -> println msg; t.printStackTrace()}] as Log
-		sm.project = [addCompileSourceRoot: { String path -> compilePath = path }] as MavenProject
+		sm.project = [addCompileSourceRoot: { String path -> compilePath = path }, getBasedir: { return new File(".")}] as MavenProject
 		sm.execute()
 
 		return sm

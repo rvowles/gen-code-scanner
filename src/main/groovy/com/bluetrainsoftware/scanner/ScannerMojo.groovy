@@ -12,8 +12,6 @@ import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.body.TypeDeclaration
 import com.github.javaparser.ast.expr.AnnotationExpr
-import com.github.javaparser.ast.expr.MarkerAnnotationExpr
-import com.github.javaparser.ast.expr.NormalAnnotationExpr
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserClassDeclaration
 import com.github.javaparser.symbolsolver.model.declarations.ReferenceTypeDeclaration
@@ -140,6 +138,8 @@ class ScannerMojo extends AbstractMojo {
 			return
 		}
 
+		getLog().info("Base project directory for scanning is ${project?.basedir?.absolutePath}")
+
 		createResolver()
 
 		facade = JavaParserFacade.get(combinedTypeSolver)
@@ -150,7 +150,7 @@ class ScannerMojo extends AbstractMojo {
 
 		scanner.scans.each { Scan scan ->
 			scan.mostSpecificPackages.each { String pkg ->
-				File dir = new File(new File(scanner.sourceBase), pkg.replace('.', File.separator));
+				File dir = new File(new File(project.basedir, scanner.sourceBase), pkg.replace('.', File.separator));
 
 				processFiles(scan, dir)
 			}
@@ -277,7 +277,7 @@ class ScannerMojo extends AbstractMojo {
 	}
 
 	void processFiles(Scan scan, File file) {
-		println "scanning ${file.absolutePath}: ${scan.recursePackages}"
+		getLog().info("scanning ${file.absolutePath}: ${scan.recursePackages}")
 		file.listFiles().each { File f ->
 			if (f.isDirectory() && scan.recursePackages) {
 				processFiles(scan, f)
