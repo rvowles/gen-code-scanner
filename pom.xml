@@ -9,7 +9,7 @@
 
 	<groupId>com.bluetrainsoftware.maven</groupId>
 	<artifactId>gen-code-scanner</artifactId>
-	<version>1.2-SNAPSHOT</version>
+	<version>1.2</version>
 	<name>gen-code-scanner</name>
 	<description>Scans the source base and generates new source for code generation</description>
 
@@ -19,7 +19,7 @@
 		<connection>scm:git:git@github.com:rvowles/gen-code-scanner.git</connection>
 		<developerConnection>scm:git:git@github.com:rvowles/gen-code-scanner.git</developerConnection>
 		<url>git@github.com:rvowles/gen-code-scanner.git</url>
-		<tag>HEAD</tag>
+		<tag>gen-code-scanner-1.2</tag>
 	</scm>
 
 	<properties>
