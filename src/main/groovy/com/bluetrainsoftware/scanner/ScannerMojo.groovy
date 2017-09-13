@@ -91,9 +91,6 @@ class ScannerMojo extends AbstractMojo {
 			combinedTypeSolver.add(new JavaParserTypeSolver(new File(sourceBase)))
 		}
 
-		// add the one specified
-		combinedTypeSolver.add(new JavaParserTypeSolver(new File(scanner.sourceBase)))
-
 		// now check if we have a url classpath
 		if (getClass().classLoader instanceof URLClassLoader) {
 			URLClassLoader urlClassLoader = URLClassLoader.class.cast(getClass().classLoader)
@@ -131,9 +128,13 @@ class ScannerMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+		if (scanner.sourceBases == null) {
+			scanner.sourceBases = project.getCompileSourceRoots()
+		}
+
 		scanner.resolveExtraPackages()
 
-		if (!scanner.scans || !scanner.sourceBase) {
+		if (!scanner.scans) {
 			getLog().warn("No scans, source base, bailing. ${scanner}")
 			return
 		}
@@ -150,9 +151,15 @@ class ScannerMojo extends AbstractMojo {
 
 		scanner.scans.each { Scan scan ->
 			scan.mostSpecificPackages.each { String pkg ->
-				File dir = new File(new File(project.basedir, scanner.sourceBase), pkg.replace('.', File.separator));
+				scanner.sourceBases.each { String sourceBase ->
+					File dir = new File(new File(project.basedir, sourceBase), pkg.replace('.', File.separator));
 
-				processFiles(scan, dir)
+					if (dir.exists()) {
+						processFiles(scan, dir)
+					} else {
+						println "${dir.path} does not exist"
+					}
+				}
 			}
 		}
 

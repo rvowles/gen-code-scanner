@@ -6,9 +6,7 @@ import org.apache.maven.plugins.annotations.Parameter
 @ToString
 class Generator extends BaseTemplate {
 	@Parameter
-	List<String> sourceBases = ["./src/main/java"]
-	@Parameter
-	String sourceBase = "./src/main/java"
+	List<String> sourceBases
 	@Parameter
 	boolean scanJarDependencies = false
 	@Parameter

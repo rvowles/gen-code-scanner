@@ -35,7 +35,7 @@ class ScannerMojoSpec extends Specification {
 			  ],
 			  template: "/web.mustache",
 			  className: "com.WebModule",
-			  sourceBase: "./src/test/java"
+			  sourceBases: ["./src/test/java"]
 		  )
 		and: "i kick it off"
 		  ScannerMojo sm = setupMojo(gen)
@@ -53,7 +53,7 @@ SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "
 			packages: ["com=filters/@WebFilter", "com=servlets/@WebServlet"],
 			template: "/web.mustache",
 			className: "com.WebModule",
-			sourceBase: "./src/test/java"
+			sourceBases: ["./src/test/java"]
 		)
 		and: "i kick it off"
 		ScannerMojo sm = setupMojo(gen)
@@ -76,7 +76,7 @@ SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "
 			],
 			template: "/web.mustache",
 			className: "com.WebModule",
-			sourceBase: "./src/test/java"
+			sourceBases: ["./src/test/java"]
 		)
 		and: "i kick it off"
 		ScannerMojo sm = setupMojo(gen)
@@ -95,7 +95,7 @@ SampleFiltername=SampleFilter,"simplefilter",initParams={ @WebInitParam(name = "
 			],
 			template: "/inject.mustache",
 			className: "com.InjectModule",
-			sourceBase: "./src/test/java"
+			sourceBases: ["./src/test/java"]
 		)
 		
 		return gen
@@ -159,7 +159,7 @@ public class InjectModule {
 				templates: [
 				  new Template(joinGroups: ["inject=sausage"], className: "com.InjectModule", name: "sample", template: "/inject.mustache")
 				],
-				sourceBase: "./src/test/java"
+				sourceBases: ["./src/test/java"]
 			)
 		and: "i kick it off"
 			ScannerMojo sm = setupMojo(gen)
