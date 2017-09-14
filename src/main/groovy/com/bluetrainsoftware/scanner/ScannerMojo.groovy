@@ -126,11 +126,19 @@ class ScannerMojo extends AbstractMojo {
 		}
 	}
 
-	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
+	protected void checkSourceBasesAreSetAndHaveCorrectOffsets() {
 		if (scanner.sourceBases == null) {
 			scanner.sourceBases = project.getCompileSourceRoots()
+		} else {
+			String projectPath = projectDir.absolutePath
+
+			scanner.sourceBases = scanner.sourceBases.collect({String sb -> sb.startsWith(projectPath) ? sb : new File(projectDir, sb).absolutePath})
 		}
+	}
+
+	@Override
+	void execute() throws MojoExecutionException, MojoFailureException {
+		checkSourceBasesAreSetAndHaveCorrectOffsets()
 
 		scanner.resolveExtraPackages()
 
@@ -152,12 +160,12 @@ class ScannerMojo extends AbstractMojo {
 		scanner.scans.each { Scan scan ->
 			scan.mostSpecificPackages.each { String pkg ->
 				scanner.sourceBases.each { String sourceBase ->
-					File dir = new File(new File(project.basedir, sourceBase), pkg.replace('.', File.separator));
+					File dir = new File(new File(sourceBase), pkg.replace('.', File.separator));
 
 					if (dir.exists()) {
 						processFiles(scan, dir)
 					} else {
-						println "${dir.path} does not exist"
+						getLog().debug("${dir.path} does not exist - ignoring")
 					}
 				}
 			}
