@@ -1,0 +1,1 @@
+This repository has now been replaced with https://github.com/ClearPointNZ/connect-java/tree/master/maven-plugins/gen-code-scanner[Connect gen-code-scanner]
